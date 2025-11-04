@@ -1,0 +1,121 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Товары</title>
+  <link rel="stylesheet" href="{% static 'style.css' %}">
+</head>
+<body>
+  {% include 'partials/header.html' %}
+
+  <main>
+    <h2>Товары</h2>
+
+    <section id="filters">
+      <form id="filter-form">
+        <input type="text" name="q" id="q" placeholder="Поиск..." />
+
+        <select name="category" id="category-select">
+          <option value="">Все категории</option>
+        </select>
+
+        <select name="brand" id="brand-select">
+          <option value="">Все бренды</option>
+        </select>
+
+        <input type="number" name="price_min" id="price_min" placeholder="Цена от" min="0" step="1" />
+        <input type="number" name="price_max" id="price_max" placeholder="Цена до" min="0" step="1" />
+
+        <button type="submit">Применить</button>
+        <button type="button" id="reset-btn">Сброс</button>
+      </form>
+    </section>
+
+    <div id="products" class="grid" style="margin-top: 16px;"></div>
+  </main>
+
+  {% include 'partials/footer.html' %}
+
+  <script>
+    const productsContainer = document.getElementById('products');
+    const categorySelect = document.getElementById('category-select');
+    const brandSelect = document.getElementById('brand-select');
+    const filterForm = document.getElementById('filter-form');
+    const resetBtn = document.getElementById('reset-btn');
+
+    // Populate categories and brands for filters
+    Promise.all([
+      fetch('/api/categories/').then(r => r.json()),
+      fetch('/api/brands/').then(r => r.json())
+    ]).then(([categories, brands]) => {
+      categories.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.title;
+        categorySelect.appendChild(opt);
+      });
+      brands.forEach(b => {
+        const opt = document.createElement('option');
+        opt.value = b.id;
+        opt.textContent = b.name;
+        brandSelect.appendChild(opt);
+      });
+      // Preselect from URL params
+      const params = new URLSearchParams(location.search);
+      if (params.get('category')) categorySelect.value = params.get('category');
+      if (params.get('brand')) brandSelect.value = params.get('brand');
+      if (params.get('q')) document.getElementById('q').value = params.get('q');
+      if (params.get('price_min')) document.getElementById('price_min').value = params.get('price_min');
+      if (params.get('price_max')) document.getElementById('price_max').value = params.get('price_max');
+      loadProducts();
+    });
+
+    function buildQuery() {
+      const formData = new FormData(filterForm);
+      const params = new URLSearchParams();
+      for (const [k, v] of formData.entries()) {
+        if (v) params.set(k, v);
+      }
+      return params.toString();
+    }
+
+    function loadProducts() {
+      const query = buildQuery();
+      const url = '/api/products/' + (query ? `?${query}` : '');
+      fetch(url)
+        .then(res => res.json())
+        .then(products => {
+          productsContainer.innerHTML = '';
+          if (!products.length) {
+            productsContainer.innerHTML = '<p>Нет товаров</p>';
+            return;
+          }
+          products.forEach(p => {
+            productsContainer.innerHTML += `
+              <div class="card">
+                ${p.image ? `<img src="${p.image}" alt="">` : ''}
+                <p>${p.title}</p>
+                <p><small>${p.brand_name || ''} ${p.category_name ? ' • ' + p.category_name : ''}</small></p>
+                <p><b>${p.price}</b></p>
+              </div>`;
+          });
+        });
+    }
+
+    filterForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const query = buildQuery();
+      const url = location.pathname + (query ? `?${query}` : '');
+      history.replaceState(null, '', url);
+      loadProducts();
+    });
+
+    resetBtn.addEventListener('click', () => {
+      filterForm.reset();
+      history.replaceState(null, '', location.pathname);
+      loadProducts();
+    });
+  </script>
+</body>
+</html>

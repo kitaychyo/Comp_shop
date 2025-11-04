@@ -1,0 +1,56 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Магазин техники</title>
+  <link rel="stylesheet" href="{% static 'style.css' %}">
+</head>
+<body>
+  {% include 'partials/header.html' %}
+
+  <main>
+    <div id="categories" class="grid"></div>
+
+    <h2>Бренды</h2>
+    <div id="brands" class="grid"></div>
+  </main>
+
+  {% include 'partials/footer.html' %}
+
+  <script>
+    // Загрузка категорий
+    fetch('/api/categories/')
+      .then(res => res.json())
+      .then(categories => {
+        const container = document.getElementById('categories');
+        categories.forEach(cat => {
+          container.innerHTML += `
+            <a href="/products/?category=${cat.id}" class="card-link">
+              <div class="card">
+                ${cat.image ? `<img src="${cat.image}" alt="">` : ''}
+                <p>${cat.title}</p>
+              </div>
+            </a>`;
+        });
+      });
+
+    // Загрузка брендов
+    fetch('/api/brands/')
+      .then(res => res.json())
+      .then(brands => {
+        const container = document.getElementById('brands');
+        brands.forEach(brand => {
+          container.innerHTML += `
+            <a href="/products/?brand=${brand.id}" class="card-link">
+              <div class="card">
+                ${brand.logo ? `<img src="${brand.logo}" alt="">` : ''}
+                <p>${brand.name}</p>
+              </div>
+            </a>`;
+        });
+      });
+
+  </script>
+</body>
+</html>
